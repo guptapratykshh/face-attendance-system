@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Sentinel" />
+  <meta name="dcterms.date" content="2026-08-26" />
+  <title>Sentinel — Product Requirements Document</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="prd-print.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Sentinel — Product Requirements Document</h1>
+<p class="author">Sentinel</p>
+<p class="date">26 August 2026</p>
+</header>
+<h1 id="product-requirements-document">Product Requirements
+Document</h1>
+<p><strong>Product:</strong> Sentinel<br />
+<strong>Full name:</strong> Sentinel Face Attendance Platform<br />
+<strong>Document type:</strong> Product Requirements Document
+(PRD)<br />
+<strong>Version:</strong> 1.0<br />
+<strong>Status:</strong> Current product (implemented)<br />
+<strong>Date:</strong> 26 August 2026<br />
+<strong>Classification:</strong> Internal — product &amp;
+engineering</p>
+<hr />
+<h2 id="purpose-of-this-document">1. Purpose of this document</h2>
+<p>This PRD describes <strong>Sentinel</strong> as a workplace product:
+what it is for, who uses it, what it must do, and how success is
+judged.</p>
+<p>Sentinel started as a face-recognition lab (FaceNet / ArcFace, LFW
+evaluation). It is now a <strong>face-attendance platform</strong>:
+employees check in with a live face, HR sees who is in, and the entrance
+can run as a kiosk. The recognition research stack remains, but the
+product promise is <strong>reliable workplace attendance</strong>, not a
+demo of embeddings.</p>
+<p>This document is the source of truth for:</p>
+<ul>
+<li>product scope that exists today</li>
+<li>roles and permissions</li>
+<li>user journeys</li>
+<li>functional and non-functional requirements</li>
+<li>what is explicitly out of scope</li>
+</ul>
+<hr />
+<h2 id="product-summary">2. Product summary</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>One-line</strong></td>
+<td>Employees mark attendance with a face. HR sees who is in. The door
+can run as a kiosk.</td>
+</tr>
+<tr>
+<td><strong>Category</strong></td>
+<td>Workplace attendance / access control</td>
+</tr>
+<tr>
+<td><strong>Primary platform</strong></td>
+<td>Web app (React) + FastAPI backend</td>
+</tr>
+<tr>
+<td><strong>Local demo</strong></td>
+<td><code>http://localhost:5173</code> (Vite) → API
+<code>http://127.0.0.1:8000</code></td>
+</tr>
+<tr>
+<td><strong>Default local admin</strong></td>
+<td><code>admin</code> / <code>admin1234</code> (SQLite)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tagline (product UI):</strong> <em>Show up. Check in. Go to
+work.</em></p>
+<hr />
+<h2 id="problem">3. Problem</h2>
+<p>Most workplace attendance is still:</p>
+<ul>
+<li>a shared PIN or RFID card (easy to share, easy to lose)</li>
+<li>a paper register or spreadsheet (slow, dishonest, hard to
+audit)</li>
+<li>a mobile “punch” that can be done from home</li>
+</ul>
+<p>Face check-in is stronger <strong>if</strong> it is actually a live
+person at the workplace. Printed photos, phone screens, and remote
+punches must fail.</p>
+<p>HR also needs a live picture of the day: who is in, who is late, who
+never got a photo enrolled, and a trail they can export.</p>
+<hr />
+<h2 id="goals">4. Goals</h2>
+<h3 id="product-goals">4.1 Product goals</h3>
+<ol type="1">
+<li>Check-in is a <strong>face moment</strong>, not a form: camera,
+oval, optional blink, clear success or retry.</li>
+<li>HR can run the day without opening a lab: Today dashboard, people
+directory, reports.</li>
+<li>The entrance can run <strong>unattended</strong> as a fullscreen
+kiosk, plus a TV “who is in” screen.</li>
+<li>Phone check-in can be <strong>locked to the office location</strong>
+that HR or Admin sets.</li>
+<li>Recognition quality stays measurable (ROC, TAR@FAR, liveness tester)
+for operators and admins.</li>
+</ol>
+<h3 id="non-goals-do-not-pretend-we-do-these-yet">4.2 Non-goals (do not
+pretend we do these yet)</h3>
+<ul>
+<li>Payroll, tax, or salary calculation</li>
+<li>Full leave / PTO workflow and manager approvals</li>
+<li>Mobile native apps (iOS / Android stores)</li>
+<li>Multi-company SaaS tenancy</li>
+<li>Voice or QR as a primary check-in method</li>
+</ul>
+<hr />
+<h2 id="users-and-roles">5. Users and roles</h2>
+<table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 15%" />
+<col style="width: 40%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>Who</th>
+<th>Home screen</th>
+<th>Can do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Employee</strong></td>
+<td>Staff member with a linked person record</td>
+<td>Check in</td>
+<td>Sign in, check in / out, month calendar + CSV, change password</td>
+</tr>
+<tr>
+<td><strong>HR</strong></td>
+<td>People operations</td>
+<td>Today</td>
+<td>People, enroll faces, reports, office hours, office location lock,
+holidays (view), kiosk, activity, TV board</td>
+</tr>
+<tr>
+<td><strong>Operator</strong></td>
+<td>Reception / security / lab</td>
+<td>Recognition lab</td>
+<td>Kiosk, activity, TV board, verify / identify / liveness, accuracy
+charts. <strong>Cannot</strong> manage people or attendance reports</td>
+</tr>
+<tr>
+<td><strong>Admin</strong></td>
+<td>IT / founder</td>
+<td>Today</td>
+<td>Everything HR can, plus staff accounts (create HR / operator /
+admin, reset passwords), holidays edit, office settings</td>
+</tr>
+</tbody>
+</table>
+<p>A person in the directory is not the same as a login. HR must
+<strong>give a login</strong> and <strong>add a face photo</strong>
+before that person can check in.</p>
+<hr />
+<h2 id="user-journeys">6. User journeys</h2>
+<h3 id="new-employee">6.1 New employee</h3>
+<ol type="1">
+<li>Employee creates an account (if public register is on)
+<strong>or</strong> HR creates the person and login.</li>
+<li>HR opens <strong>Add faces</strong>, captures a front-facing
+photo.</li>
+<li>Employee opens <strong>Check in</strong>. The page waits until a
+photo exists.</li>
+<li>Employee looks at the camera, blinks if liveness is required, and is
+marked present.</li>
+</ol>
+<h3 id="morning-at-the-door">6.2 Morning at the door</h3>
+<ol type="1">
+<li>Staff opens <strong>Entrance kiosk</strong> (fullscreen, no
+sidebar).</li>
+<li>Visitor or employee faces the oval and taps Check in (blink if
+required).</li>
+<li>On match: name, time, late badge; screen resets after a few
+seconds.</li>
+<li>If the camera fails: staff uses <strong>employee ID</strong> as a
+supervised PIN.</li>
+<li>Optional: a TV on <strong>Entrance screen</strong>
+(<code>/board</code>) shows who is in now vs still expected.</li>
+</ol>
+<h3 id="hrs-day">6.3 HR’s day</h3>
+<ol type="1">
+<li><strong>Today</strong> auto-refreshes: present, late, not in, failed
+checks, waiting for photo.</li>
+<li>Click a name → person timeline (punches and events).</li>
+<li><strong>Reports</strong> with Today / This week / This month +
+CSV.</li>
+<li>Set <strong>office hours</strong>, <strong>weekends</strong>,
+<strong>holidays</strong>, and <strong>office location
+lock</strong>.</li>
+</ol>
+<h3 id="location-locked-check-in">6.4 Location-locked check-in</h3>
+<ol type="1">
+<li>HR or Admin stands at the workplace.</li>
+<li><strong>Today → Office location lock → Use this device as the
+office</strong>, pick radius (e.g. 150 m), save.</li>
+<li>Employee check-in requests GPS. Outside the circle, or location
+denied → <strong>not present</strong>.</li>
+<li>Physical <strong>kiosk</strong> at the door does
+<strong>not</strong> require GPS (the device is already on site).</li>
+</ol>
+<hr />
+<h2 id="functional-requirements">7. Functional requirements</h2>
+<p>Priority: <strong>P0</strong> must work for a demo / first workplace;
+<strong>P1</strong> expected in this build; <strong>P2</strong>
+later.</p>
+<h3 id="authentication-and-accounts-p0">7.1 Authentication and accounts
+— P0</h3>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 76%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AUTH-1</td>
+<td>JWT login; session on the SPA.</td>
+</tr>
+<tr>
+<td>AUTH-2</td>
+<td>Roles: <code>admin</code>, <code>hr</code>, <code>operator</code>,
+<code>employee</code>.</td>
+</tr>
+<tr>
+<td>AUTH-3</td>
+<td>Optional public self-register (can be disabled). After register,
+employee sees a 3-step “what happens next”.</td>
+</tr>
+<tr>
+<td>AUTH-4</td>
+<td>Admin can create staff users and reset passwords
+(<strong>Staff</strong>).</td>
+</tr>
+<tr>
+<td>AUTH-5</td>
+<td>HR can set or reset an employee username/password from
+<strong>People</strong>.</td>
+</tr>
+<tr>
+<td>AUTH-6</td>
+<td>Employee can change their own password.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="directory-and-enrollment-p0">7.2 Directory and enrollment —
+P0</h3>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 76%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PEO-1</td>
+<td>Add, search, edit, CSV import, soft-deactivate people.</td>
+</tr>
+<tr>
+<td>PEO-2</td>
+<td>Fields: name, employee ID (unique), email, notes, department,
+office, shift start/end.</td>
+</tr>
+<tr>
+<td>PEO-3</td>
+<td>Enroll one or more face photos; quality gates reject no-face /
+multi-face / poor frames.</td>
+</tr>
+<tr>
+<td>PEO-4</td>
+<td>Person timeline: attendance + audit events.</td>
+</tr>
+<tr>
+<td>PEO-5</td>
+<td>Deactivated people cannot check in; history is kept.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="employee-attendance-p0">7.3 Employee attendance — P0</h3>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 76%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ATT-1</td>
+<td>1:1 verify against the enrolled embedding; threshold from evaluation
+(TAR@FAR 1e-3 by default).</td>
+</tr>
+<tr>
+<td>ATT-2</td>
+<td>Optional blink liveness before check-in when
+<code>require_liveness</code> is on.</td>
+</tr>
+<tr>
+<td>ATT-3</td>
+<td>One present mark per local calendar day; repeat check-in returns
+already marked.</td>
+</tr>
+<tr>
+<td>ATT-4</td>
+<td>Late if after work start + grace (person shift overrides office
+hours).</td>
+</tr>
+<tr>
+<td>ATT-5</td>
+<td>Check-out with optional second face; early leave if before work end
+/ shift end.</td>
+</tr>
+<tr>
+<td>ATT-6</td>
+<td>If office geofence is set: employee check-in <strong>must</strong>
+send GPS and be inside the radius.</td>
+</tr>
+<tr>
+<td>ATT-7</td>
+<td>Personal month view + CSV export.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="kiosk-and-tv-board-p0-p1">7.4 Kiosk and TV board — P0 / P1</h3>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 76%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>KIO-1</td>
+<td>Staff-only fullscreen kiosk; 1:N identify against the gallery.</td>
+</tr>
+<tr>
+<td>KIO-2</td>
+<td>Oval + scan overlay; success/fail moment; auto-reset ~5s.</td>
+</tr>
+<tr>
+<td>KIO-3</td>
+<td>Kiosk liveness when required; PIN = employee ID if camera
+fails.</td>
+</tr>
+<tr>
+<td>KIO-4</td>
+<td>Kiosk is <strong>not</strong> GPS-gated.</td>
+</tr>
+<tr>
+<td>BRD-1</td>
+<td><code>/board</code> entrance screen: in now, not in yet, live clock,
+% of expected. TV-friendly, no sidebar.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="hr-operations-p0-p1">7.5 HR operations — P0 / P1</h3>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 76%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OPS-1</td>
+<td>Today dashboard polls ~12s: present, late, absent, failed, pending
+faces, still out.</td>
+</tr>
+<tr>
+<td>OPS-2</td>
+<td>Office hours, timezone, grace, weekend days. HR and Admin may
+edit.</td>
+</tr>
+<tr>
+<td>OPS-3</td>
+<td>Office location lock (lat/lng/radius). HR and Admin may edit.</td>
+</tr>
+<tr>
+<td>OPS-4</td>
+<td>Holidays so expected attendance skips those days.</td>
+</tr>
+<tr>
+<td>OPS-5</td>
+<td>Reports with date presets and CSV. Activity log with CSV.</td>
+</tr>
+<tr>
+<td>OPS-6</td>
+<td>Optional email: enrolled face, late, 3 failed checks, absent after
+start+grace.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="recognition-lab-p1">7.6 Recognition lab — P1</h3>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 76%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LAB-1</td>
+<td>Accuracy charts: ROC, TAR@FAR, score histograms (from
+<code>reports/evaluation.json</code>).</td>
+</tr>
+<tr>
+<td>LAB-2</td>
+<td>Verify two photos; identify 1:N.</td>
+</tr>
+<tr>
+<td>LAB-3</td>
+<td>Blink liveness tester with Live / Not live + blink meter (not raw
+JSON).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="platform-p0">7.7 Platform — P0</h3>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 76%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLT-1</td>
+<td>SQLite locally; Postgres + Alembic in Docker / production.</td>
+</tr>
+<tr>
+<td>PLT-2</td>
+<td>Rate limits on login and check-in.</td>
+</tr>
+<tr>
+<td>PLT-3</td>
+<td>Health / ready endpoints. CI: pytest, frontend tests, build.</td>
+</tr>
+<tr>
+<td>PLT-4</td>
+<td>Dark-first greyscale UI; status badges keep pass/fail colour.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="face-pipeline-how-matching-works">8. Face pipeline (how matching
+works)</h2>
+<p>This is the differentiator. Product copy should stay human; this
+section is for engineering and reviewers.</p>
+<pre><code>Camera frame
+  → detect face (SCRFD)
+  → quality gates (one face, size, blur, brightness)
+  → 5-point align
+  → L2-normalised embedding (FaceNet or ArcFace, 512-D)
+  → cosine vs enrolled gallery (FAISS inner product or NumPy)
+  → match if score ≥ calibrated threshold</code></pre>
+<table>
+<thead>
+<tr>
+<th>Encoder</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FaceNet (Inception-ResNet-v1, VGGFace2)</td>
+<td>Default published weights</td>
+</tr>
+<tr>
+<td>ArcFace (<code>w600k_r50</code> ONNX)</td>
+<td>Published reference</td>
+</tr>
+<tr>
+<td>Fine-tuned FaceNet + ArcFace head</td>
+<td>Optional; evaluated on LFW</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Operating point:</strong> TAR at FAR = <strong>0.001</strong>
+on LFW View 2 (6,000 pairs). The live API uses that threshold unless
+overridden.</p>
+<p><strong>Liveness:</strong> short blink challenge (eye aspect ratio)
+plus a texture cue so a printed photo or screen is less likely to
+pass.</p>
+<p><strong>Gallery:</strong> embeddings stored per person; identify is
+1:N search.</p>
+<hr />
+<h2 id="information-architecture-screens">9. Information architecture
+(screens)</h2>
+<table>
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 38%" />
+<col style="width: 34%" />
+</colgroup>
+<thead>
+<tr>
+<th>Route</th>
+<th>Audience</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/login</code></td>
+<td>All</td>
+<td>Sign in / register</td>
+</tr>
+<tr>
+<td><code>/</code></td>
+<td>HR, Admin</td>
+<td>Today — who is in</td>
+</tr>
+<tr>
+<td><code>/board</code></td>
+<td>Staff</td>
+<td>TV entrance screen</td>
+</tr>
+<tr>
+<td><code>/people</code>, <code>/people/:id</code></td>
+<td>HR, Admin</td>
+<td>Directory and timeline</td>
+</tr>
+<tr>
+<td><code>/enroll</code></td>
+<td>HR, Admin</td>
+<td>Face photos</td>
+</tr>
+<tr>
+<td><code>/reports</code></td>
+<td>HR, Admin</td>
+<td>Attendance export</td>
+</tr>
+<tr>
+<td><code>/kiosk</code></td>
+<td>Staff</td>
+<td>Entrance check-in</td>
+</tr>
+<tr>
+<td><code>/events</code></td>
+<td>Staff</td>
+<td>Audit log</td>
+</tr>
+<tr>
+<td><code>/staff</code></td>
+<td>Admin</td>
+<td>Create HR / operator / admin</td>
+</tr>
+<tr>
+<td><code>/attendance</code>, <code>/my-attendance</code>,
+<code>/profile</code></td>
+<td>Employee</td>
+<td>Check in, days, password</td>
+</tr>
+<tr>
+<td><code>/lab</code>, <code>/verify</code>, <code>/identify</code>,
+<code>/liveness</code></td>
+<td>Admin, Operator</td>
+<td>Recognition lab</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="non-functional-requirements">10. Non-functional
+requirements</h2>
+<table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 68%" />
+</colgroup>
+<thead>
+<tr>
+<th>Area</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Latency</strong></td>
+<td>Check-in should feel interactive on CPU with a single face
+(typically a few hundred ms plus network).</td>
+</tr>
+<tr>
+<td><strong>Accuracy</strong></td>
+<td>Publish LFW accuracy, EER, TAR@FAR; do not silently swap
+encoders.</td>
+</tr>
+<tr>
+<td><strong>Privacy</strong></td>
+<td>Store embeddings and audit events, not a video archive of every
+frame. Limit who can see people and reports.</td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>JWT; production must set a real <code>FRS_SECRET_KEY</code>; disable
+public register in production; geofence is <strong>assistive</strong>,
+not a substitute for a guarded door.</td>
+</tr>
+<tr>
+<td><strong>Reliability</strong></td>
+<td><code>/ready</code> reports database, weights, gallery.</td>
+</tr>
+<tr>
+<td><strong>Deploy</strong></td>
+<td>Docker Compose + Postgres for a real install; SQLite for local
+demo.</td>
+</tr>
+<tr>
+<td><strong>A11y / UI</strong></td>
+<td>Large kiosk type; camera-denied copy; no raw <code>play()</code>
+errors on the kiosk.</td>
+</tr>
+<tr>
+<td><strong>Timezone</strong></td>
+<td>Late / absent / “today” use office timezone (default
+<code>Asia/Kolkata</code>).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="success-metrics">11. Success metrics</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 66%" />
+</colgroup>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time to first successful check-in (new hire)</td>
+<td>Enrollment + login friction</td>
+</tr>
+<tr>
+<td>Present vs expected by 10 minutes after start + grace</td>
+<td>Did the office actually fill?</td>
+</tr>
+<tr>
+<td>False reject rate at the kiosk (qualitative + failed_today)</td>
+<td>Light, pose, enrollment quality</td>
+</tr>
+<tr>
+<td>False accept incidents</td>
+<td>Shared phone, photo attack, PIN misuse</td>
+</tr>
+<tr>
+<td>% of employee check-ins blocked by geofence</td>
+<td>Policy is working vs GPS too strict</td>
+</tr>
+<tr>
+<td>TAR@FAR 1e-3 on LFW</td>
+<td>Encoder still honest</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="risks-and-mitigations">12. Risks and mitigations</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 66%" />
+</colgroup>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Printed photo or replay</td>
+<td>Blink + texture liveness; kiosk lighting</td>
+</tr>
+<tr>
+<td>Buddy punching from home</td>
+<td>Office location lock on phone check-in; kiosk at the door</td>
+</tr>
+<tr>
+<td>GPS spoof / coarse GPS</td>
+<td>Reasonable radius; kiosk still available; do not claim
+military-grade geo</td>
+</tr>
+<tr>
+<td>Poor enrollment photo</td>
+<td>Quality gates; “add another photo”</td>
+</tr>
+<tr>
+<td>Threshold too strict / too loose</td>
+<td>Lab charts; FAR 1e-3 default</td>
+</tr>
+<tr>
+<td>Camera <code>play()</code> races in the browser</td>
+<td>Webcam hook ignores abort; single in-flight start</td>
+</tr>
+<tr>
+<td>Privacy / labour law</td>
+<td>Consent, retention policy, role limits — <strong>legal review is on
+the customer</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="out-of-scope-later">13. Out of scope / later</h2>
+<p>These are known and <strong>not</strong> required for this PRD
+version:</p>
+<ul>
+<li>Leave requests, WFH, manager exception approvals</li>
+<li>Multi-office timezones as first-class tenants (people have an
+<code>office</code> field; hours are still global)</li>
+<li>Slack alerts (email exists when SMTP is configured)</li>
+<li>PWA install / home-screen check-in as a dedicated track</li>
+<li>Stronger anti-spoof than blink (challenge-response, depth)</li>
+<li>Payroll export beyond attendance CSV</li>
+</ul>
+<hr />
+<h2 id="technical-snapshot-for-implementers">14. Technical snapshot (for
+implementers)</h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Choice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frontend</td>
+<td>React, Vite, Tailwind, Recharts</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>FastAPI, SQLModel</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>JWT Bearer</td>
+</tr>
+<tr>
+<td>DB</td>
+<td>SQLite (local), PostgreSQL + Alembic (prod)</td>
+</tr>
+<tr>
+<td>Index</td>
+<td>FAISS <code>IndexFlatIP</code></td>
+</tr>
+<tr>
+<td>Detect</td>
+<td>SCRFD</td>
+</tr>
+<tr>
+<td>API prefix</td>
+<td><code>/api/v1</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Core resources:</strong> <code>/auth/*</code>,
+<code>/persons/*</code>, <code>/attendance/*</code> (check-in,
+check-out, kiosk, export), <code>/ops/summary</code>,
+<code>/settings</code>, <code>/holidays</code>, <code>/users</code>,
+<code>/events</code>, <code>/liveness/*</code>, <code>/verify</code>,
+<code>/identify</code>, <code>/metrics</code>.</p>
+<hr />
+<h2 id="acceptance-criteria-release-checklist">15. Acceptance criteria
+(release checklist)</h2>
+<p>A build matches this PRD when:</p>
+<ol type="1">
+<li>An employee with a photo can check in; without a photo they
+cannot.</li>
+<li>HR sees Today update without a manual refresh.</li>
+<li>Kiosk identifies from the gallery and resets after
+success/fail.</li>
+<li>With location lock <strong>on</strong>, a check-in with no GPS or a
+far coordinate is rejected; a coordinate inside the radius can
+succeed.</li>
+<li>With location lock <strong>on</strong>, kiosk check-in still
+succeeds without GPS.</li>
+<li>Admin can create an HR user from <strong>Staff</strong>.</li>
+<li>Reports CSV and activity CSV download.</li>
+<li>Lab charts load when <code>reports/evaluation.json</code>
+exists.</li>
+<li>Backend tests and frontend tests pass.</li>
+</ol>
+<hr />
+<h2 id="glossary">16. Glossary</h2>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Person</strong></td>
+<td>Workplace identity (name, employee ID, face embeddings).</td>
+</tr>
+<tr>
+<td><strong>User</strong></td>
+<td>Login account with a role; employees are linked to one person.</td>
+</tr>
+<tr>
+<td><strong>Gallery</strong></td>
+<td>Searchable set of enrolled embeddings.</td>
+</tr>
+<tr>
+<td><strong>Verify (1:1)</strong></td>
+<td>Is this face the claimed person?</td>
+</tr>
+<tr>
+<td><strong>Identify (1:N)</strong></td>
+<td>Who is this face among enrolled people?</td>
+</tr>
+<tr>
+<td><strong>TAR / FAR</strong></td>
+<td>True-accept rate / false-accept rate.</td>
+</tr>
+<tr>
+<td><strong>Liveness</strong></td>
+<td>Evidence the camera sees a live person (blink), not a photo.</td>
+</tr>
+<tr>
+<td><strong>Geofence</strong></td>
+<td>Circle around the office; phone check-in must fall inside it.</td>
+</tr>
+<tr>
+<td><strong>Kiosk</strong></td>
+<td>Staff-supervised entrance device, fullscreen.</td>
+</tr>
+<tr>
+<td><strong>Entrance screen</strong></td>
+<td>TV board at <code>/board</code> showing who is in.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="document-control">17. Document control</h2>
+<table>
+<colgroup>
+<col style="width: 39%" />
+<col style="width: 26%" />
+<col style="width: 34%" />
+</colgroup>
+<thead>
+<tr>
+<th>Version</th>
+<th>Date</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.0</td>
+<td>26 Aug 2026</td>
+<td>First full PRD for Sentinel as a face-attendance product, matching
+the implemented app.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Owner:</strong> Product / project lead<br />
+<strong>Reviewers:</strong> Engineering, HR operations (customer)<br />
+<strong>Related:</strong> <code>README.md</code> (setup and evaluation),
+<code>reports/TAR_FAR_REPORT.md</code> (encoder numbers)</p>
+</body>
+</html>
