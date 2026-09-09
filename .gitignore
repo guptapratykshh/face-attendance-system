@@ -1,0 +1,31 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Data, weights, and generated artifacts
+data/
+checkpoints/
+reports/figures/*.png
+reports/*.json
+weights/
+*.tgz
+*.zip
+*.pt
+*.onnx
+*.task
+
+# App state
+*.db
+*.sqlite3
+.env
+
+# Frontend
+node_modules/
+dist/
+.vite/
+
+# OS
+.DS_Store
