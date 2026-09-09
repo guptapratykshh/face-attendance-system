@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="On-the-Job Training (OJT) Project Framework" />
+  <meta name="dcterms.date" content="2026-08-27" />
+  <title>Face Attendance System — OJT PRD v1.0</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="prd-print.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Face Attendance System — OJT PRD v1.0</h1>
+<p class="subtitle">Face Attendance System</p>
+<p class="author">On-the-Job Training (OJT) Project Framework</p>
+<p class="date">27 August 2026</p>
+</header>
+<p><strong>Course / Track:</strong> On-the-Job Training (OJT) Project
+Framework<br />
+<strong>Document type:</strong> Initial PRD (v1.0) — Common Core + Track
+D: Multimodal AI<br />
+<strong>Status:</strong> Draft for mentor review (30 Aug – 3 Sept)</p>
+<blockquote>
+<p>Fill <strong>Team IDs</strong> and <strong>Assigned Mentor</strong>
+before submission. This PRD covers the <strong>initial product</strong>
+only (web app + REST API + face recognition attendance). Later extras
+(multi-tenant orgs, GPS lock, spoof-review queue, kiosk PIN,
+school/college kernels) are listed as out of scope.</p>
+</blockquote>
+<hr />
+<h1 id="document-overview-metadata">1. Document Overview &amp;
+Metadata</h1>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description / Student Inputs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Project Title</strong></td>
+<td>Face Attendance System</td>
+</tr>
+<tr>
+<td><strong>Project Track</strong></td>
+<td>Multimodal AI (Computer Vision / AI Infrastructure)</td>
+</tr>
+<tr>
+<td><strong>Team Members &amp; IDs</strong></td>
+<td>Pratyksh Gupta — Student ID: <em>[fill before submit]</em></td>
+</tr>
+<tr>
+<td><strong>Assigned Mentor</strong></td>
+<td><em>[Mentor name — confirm in group sync]</em></td>
+</tr>
+<tr>
+<td><strong>Document Version &amp; Date</strong></td>
+<td>v1.0 | 27 August 2026</td>
+</tr>
+<tr>
+<td><strong>Working name</strong></td>
+<td>Sentinel (internal UI name; official OJT title remains Face
+Attendance System)</td>
+</tr>
+<tr>
+<td><strong>Domain</strong></td>
+<td>Computer Vision — automate attendance</td>
+</tr>
+<tr>
+<td><strong>Primary deliverable</strong></td>
+<td>Deployed full-stack AI application: <strong>Web app + REST
+API</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Target users:</strong> administrators / HR, security or
+reception staff, and enrolled employees (end users).</p>
+<hr />
+<h1 id="executive-summary-problem-statement">2. Executive Summary &amp;
+Problem Statement</h1>
+<h2 id="problem-statement">2.1 Problem Statement</h2>
+<p>Schools, offices, and small workplaces still mark attendance with
+paper registers, shared PINs, RFID cards, or a mobile “I am here”
+button. These methods are easy to share, easy to fake, and hard to
+audit. A person can mark a friend present, punch from home, or lose a
+card.</p>
+<p>A <strong>face attendance system</strong> can replace that ritual
+with a camera: the person looks at the device, the system recognises an
+enrolled face, and a present/absent record is stored. That only works if
+three things are true:</p>
+<ol type="1">
+<li>The face on camera is matched to the correct enrolled person
+(identity).</li>
+<li>The capture is a <strong>live person</strong>, not a printed photo
+or a phone screen (liveness).</li>
+<li>Staff can <strong>see and export</strong> who was present, without
+running a research notebook.</li>
+</ol>
+<p>Existing consumer “face unlock” is built for one device and one user.
+Workplace attendance needs a <strong>gallery of many people</strong>, a
+<strong>web dashboard</strong>, <strong>accounts</strong>, and a
+<strong>REST API</strong>. Off-the-shelf attendance products are
+expensive, closed, and rarely expose how the model was evaluated. This
+project builds a <strong>small, inspectable full-stack system</strong>:
+React UI + FastAPI + a published face encoder, with accuracy reported on
+a public benchmark (LFW).</p>
+<h2 id="project-objectives">2.2 Project Objectives</h2>
+<p><strong>Technical / functional goals (initial product)</strong></p>
+<ol type="1">
+<li>Enroll people with face photos and store a searchable embedding
+gallery.</li>
+<li>Let an employee or kiosk camera <strong>check in</strong>; mark
+<strong>present</strong> only on a confident match.</li>
+<li>Provide <strong>login</strong> (admin vs employee), <strong>people
+CRUD</strong>, an <strong>attendance dashboard</strong>, and <strong>CSV
+reports</strong>.</li>
+<li>Fuse two streams for a check-in decision: <strong>face
+appearance</strong> (who) and a short <strong>blink / motion
+cue</strong> (alive).</li>
+<li>Expose the same behaviour through a documented <strong>REST
+API</strong>.</li>
+</ol>
+<p><strong>Success metrics (grading + product)</strong></p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Initial target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dashboard load</td>
+<td><strong>&lt; 2 s</strong> on a normal laptop / campus Wi‑Fi</td>
+</tr>
+<tr>
+<td>Authentication</td>
+<td>JWT sessions; passwords hashed; role-restricted routes</td>
+</tr>
+<tr>
+<td>CRUD accuracy</td>
+<td>Create / read / update / deactivate a person and see the change on
+the dashboard</td>
+</tr>
+<tr>
+<td>Report generation</td>
+<td>Date-range attendance export as <strong>CSV</strong> (PDF optional
+in Month 3)</td>
+</tr>
+<tr>
+<td>UI</td>
+<td>Responsive web layout (desktop + phone browser)</td>
+</tr>
+<tr>
+<td>Recognition</td>
+<td>TAR@FAR = 1e-3 reported on <strong>LFW View 2</strong>; operating
+threshold taken from that curve</td>
+</tr>
+<tr>
+<td>Check-in latency</td>
+<td>Face detect + embed + match typically <strong>&lt; 1 s</strong> on
+CPU for one face</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Audience and impact</strong></p>
+<ul>
+<li><strong>Employees:</strong> mark presence without a shared PIN.</li>
+<li><strong>Administrators / HR:</strong> one screen for today’s present
+list and a downloadable register.</li>
+<li><strong>Security / reception:</strong> a simple camera check-in
+page.</li>
+<li><strong>Practical impact:</strong> fewer proxy punches, a stored
+audit trail, and a student-built system whose model quality is
+measurable — not a black-box demo.</li>
+</ul>
+<hr />
+<h1 id="system-architecture-high-level-design">3. System Architecture
+&amp; High-Level Design</h1>
+<h2 id="end-to-end-system-pipeline">3.1 End-to-End System Pipeline</h2>
+<p><strong>User journey (check-in)</strong><br />
+Employee or staff opens the web app → signs in → camera captures a frame
+(and a short burst if liveness is on) → backend runs the vision pipeline
+→ identity + liveness decision → attendance row written → dashboard
+refreshes.</p>
+<h3 id="data-ingestion">Data ingestion</h3>
+<ul>
+<li><strong>Sources:</strong> webcam JPEG/PNG from the browser;
+admin-uploaded enrollment photos; public <strong>LFW</strong> images for
+<em>offline</em> model evaluation only (not mixed into the live
+gallery).</li>
+<li><strong>Mode:</strong> request/response (not a Kafka-style stream).
+Each check-in is one HTTP call (or a small burst of frames for
+blink).</li>
+<li><strong>Raw formats:</strong> RGB images; metadata = user id,
+timestamp, optional site label.</li>
+</ul>
+<h3 id="processing-modeling-engine">Processing &amp; modeling
+engine</h3>
+<ol type="1">
+<li><strong>Detect</strong> face (SCRFD). Reject: no face, several
+faces, face too small / blurry.</li>
+<li><strong>Align</strong> with 5-point landmarks (similarity transform)
+to a fixed crop.</li>
+<li><strong>Embed</strong> with FaceNet or ArcFace → L2-normalised
+<strong>512-D</strong> vector.</li>
+<li><strong>Match</strong> cosine similarity against the in-memory
+gallery (FAISS IndexFlatIP or equivalent exact inner product).</li>
+<li><strong>Liveness (multimodal stream 2):</strong> eye-openness over a
+short frame sequence; require a blink-like valley so a still photo is
+less likely to pass.</li>
+<li><strong>Decision:</strong> <code>present</code> if similarity ≥
+threshold <strong>and</strong> liveness passes (when enabled); otherwise
+<code>no_match</code> / <code>failed</code> and no attendance
+credit.</li>
+</ol>
+<h3 id="storage-layer">Storage layer</h3>
+<ul>
+<li><strong>SQLite</strong> (dev) / <strong>PostgreSQL</strong>
+(deploy): users, people, embeddings metadata, attendance rows,
+events.</li>
+<li><strong>FAISS</strong> (or numpy cosine) index in process memory,
+rebuilt from stored embeddings.</li>
+<li><strong>Files:</strong> model weights (<code>weights/</code>),
+evaluation JSON (<code>reports/evaluation.json</code>).</li>
+</ul>
+<h3 id="presentation-layer">Presentation layer</h3>
+<ul>
+<li><strong>React + Vite</strong> SPA (Tailwind CSS): login, check-in,
+people directory, today dashboard, reports.</li>
+<li><strong>FastAPI</strong> REST under <code>/api/v1</code>.</li>
+</ul>
+<h2 id="architecture-diagram">3.2 Architecture Diagram</h2>
+<pre><code>  React web app (Vite)
+        |  JWT  +  image upload / webcam JPEG
+        v
+  FastAPI  (/api/v1)
+        |
+        +-- Auth (login, me)
+        +-- People CRUD + enroll photos
+        +-- Attendance check-in / list / CSV
+        |
+        v
+  Vision pipeline
+   detect (SCRFD) → align → embed (ArcFace / FaceNet)
+        |                         |
+        |                         +--&gt; gallery match (cosine)
+        +--&gt; blink / texture cues (late fusion)
+        v
+  SQLite / PostgreSQL     FAISS gallery
+        |
+        v
+  Today dashboard  +  CSV report</code></pre>
+<p><strong>Offline evaluation path (not on the live check-in hot
+path):</strong> LFW pairs → same detect/align/embed → TAR@FAR / 10-fold
+accuracy → threshold written to <code>reports/evaluation.json</code> →
+API uses that operating point.</p>
+<hr />
+<h1 id="technical-stack-infrastructure">4. Technical Stack &amp;
+Infrastructure</h1>
+<p>The assigned build stack is <strong>Python + OpenCV + React +
+FastAPI</strong>. (The generic MERN row in the track sheet is not used;
+Node/Express/Mongo would duplicate the API and do not run ONNX face
+models well.)</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Component</th>
+<th>Technologies / Frameworks chosen</th>
+<th>Rationale / justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Frontend / UI</strong></td>
+<td>React 18, Vite, TypeScript, Tailwind CSS</td>
+<td>Standard SPA for dashboards; Vite is fast for student iteration;
+Tailwind keeps a responsive, dark-mode-capable UI without a heavy design
+system.</td>
+</tr>
+<tr>
+<td><strong>Backend API</strong></td>
+<td>FastAPI (Python 3.12), Uvicorn, SQLModel</td>
+<td>Same language as the CV stack; automatic OpenAPI; typed
+request/response models; easy file uploads for faces.</td>
+</tr>
+<tr>
+<td><strong>ML / AI</strong></td>
+<td>OpenCV, InsightFace SCRFD, FaceNet (PyTorch) / ArcFace ONNX,
+NumPy</td>
+<td>OpenCV for image I/O and crops; published encoders instead of
+training from scratch on a laptop; ONNX Runtime for ArcFace on CPU.</td>
+</tr>
+<tr>
+<td><strong>Database &amp; storage</strong></td>
+<td>SQLite (local), PostgreSQL (production target), FAISS
+IndexFlatIP</td>
+<td>SQLite needs no install for Viva 1; Postgres later for deploy; FAISS
+for exact cosine search on a small gallery.</td>
+</tr>
+<tr>
+<td><strong>Evaluation</strong></td>
+<td>LFW View 2, scikit-learn / custom TAR@FAR scripts, Pandas</td>
+<td>Public, cited protocol; matches “AI model evaluation” in the track
+brief.</td>
+</tr>
+<tr>
+<td><strong>Deployment</strong></td>
+<td>Docker Compose; Render / Railway / a campus VM (Month 3)</td>
+<td>Reproducible API + web static build; free-tier friendly. GitHub from
+<strong>6 Sept</strong>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="functional-non-functional-requirements">5. Functional &amp;
+Non-Functional Requirements</h1>
+<h2 id="functional-requirements">5.1 Functional Requirements</h2>
+<h3 id="feature-1-core-attendance-module-web">Feature 1 — Core
+attendance module (web)</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Users</strong></td>
+<td>Employee (self check-in); Admin (directory + dashboard)</td>
+</tr>
+<tr>
+<td><strong>Input</strong></td>
+<td>Webcam frame(s) after login; or admin-uploaded enrollment
+photos</td>
+</tr>
+<tr>
+<td><strong>Behaviour</strong></td>
+<td>If the face matches an enrolled person above threshold (and liveness
+if on), write <strong>present</strong> for today with timestamp.
+Duplicate check-in the same morning updates time or is ignored (single
+daily present for v1).</td>
+</tr>
+<tr>
+<td><strong>Output</strong></td>
+<td>On-screen name + time, or a clear error: no face / unknown / try
+again. Admin <strong>Today</strong> view lists present vs not yet
+in.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>People CRUD:</strong> admin can add name + employee id,
+upload 1–5 enrollment photos, deactivate a person (they must not match
+after deactivation).</p>
+<p><strong>Reports:</strong> filter by day / week / month;
+<strong>Export CSV</strong> (required). PDF export is a Month 3 polish
+item, not a Viva 1 blocker.</p>
+<h3 id="feature-2-api-layer">Feature 2 — API layer</h3>
+<p>Prefix: <code>/api/v1</code>. JSON + <code>multipart/form-data</code>
+for images. Auth: <code>Authorization: Bearer &lt;JWT&gt;</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/auth/login</code></td>
+<td>Username + password → access token</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/auth/me</code></td>
+<td>Current user + linked person</td>
+</tr>
+<tr>
+<td><code>GET</code>/<code>POST</code>/<code>PATCH</code></td>
+<td><code>/persons</code></td>
+<td>Directory CRUD (admin)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/persons/{id}/enroll</code></td>
+<td>Upload enrollment image(s)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/attendance/check-in</code></td>
+<td>Webcam image → present / reject</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/attendance</code></td>
+<td>List records (role-filtered)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/attendance/export</code></td>
+<td>CSV download</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/verify</code></td>
+<td>Lab: two images → similarity (admin/operator)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/health</code></td>
+<td>Encoder name, gallery size, thresholds</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Typical check-in payload:</strong> image file.
+<strong>Response:</strong>
+<code>{ decision, person_id, name, similarity }</code> or HTTP 4xx with
+<code>detail</code> (<code>no_face</code>, <code>no_match</code>,
+<code>liveness_failed</code>).</p>
+<h3 id="feature-3-model-inferencing">Feature 3 — Model inferencing</h3>
+<ul>
+<li><strong>Realtime:</strong> one request, one (or a short burst of)
+frame(s); no overnight batch jobs for v1.</li>
+<li><strong>Offline batch:</strong> LFW evaluation scripts
+(<code>scripts/evaluate.py</code>) to pick encoder and threshold.</li>
+<li><strong>Gallery:</strong> embeddings stored at enroll time; check-in
+only computes the <strong>probe</strong> embedding.</li>
+</ul>
+<h2 id="non-functional-requirements">5.2 Non-Functional
+Requirements</h2>
+<ul>
+<li><strong>Performance &amp; latency:</strong> dashboard shell
+<strong>&lt; 2 s</strong>; single-face inference target <strong>&lt; 1
+s</strong> on CPU (ArcFace ONNX). Not a 200 ms GPU SLA — that is
+unrealistic on student hardware.</li>
+<li><strong>Scalability &amp; concurrency:</strong> v1 sized for
+<strong>one workplace / one class</strong> (tens to low hundreds of
+identities, a few simultaneous check-ins). Not a city-scale
+cluster.</li>
+<li><strong>Security &amp; privacy:</strong> bcrypt/argon2 hashes; JWT
+expiry; HTTPS on deploy; enrollment photos stored only for enrolled
+staff; no public gallery dump. Consent: organisation informs people that
+faces are used for attendance.</li>
+<li><strong>Reliability:</strong> reject bad frames instead of guessing;
+log failed checks; if the encoder cannot load, <code>/health</code>
+reports error and check-in returns 503.</li>
+</ul>
+<hr />
+<h1 id="data-strategy-management">6. Data Strategy &amp; Management</h1>
+<p><strong>Dataset source &amp; acquisition</strong></p>
+<ul>
+<li><strong>Live product data:</strong> enrollment photos captured on
+site (not scraped).</li>
+<li><strong>Benchmark:</strong> <a
+href="https://vis-www.cs.umass.edu/lfw/">LFW</a> (Huang et al.) —
+unrestricted View 2 pairs for TAR@FAR. Optional small
+<strong>VGGFace2</strong> subset only for optional FaceNet fine-tune
+(Month 2), with LFW-overlapping identities <strong>excluded</strong> so
+test is not contaminated.</li>
+<li>The track spreadsheet lists WikiQA / RAG; those belong to NLP/Gen-AI
+tracks. This project is <strong>vision</strong>, so LFW is the
+evaluation set.</li>
+</ul>
+<p><strong>Preprocessing &amp; cleaning</strong></p>
+<ul>
+<li>Detect → 5-point align → resize (160 FaceNet / 112 ArcFace) → RGB
+uint8.</li>
+<li>Drop frames with no face, multiple faces, or weak detection
+score.</li>
+<li>Embeddings L2-normalised; score = cosine (inner product of unit
+vectors).</li>
+</ul>
+<p><strong>Privacy &amp; compliance</strong></p>
+<ul>
+<li>Face images are <strong>biometric-class</strong> data: keep them on
+the organisation’s server; do not publish student webcam captures.</li>
+<li>Provide admin <strong>deactivate / delete person</strong> so a
+leaver can be removed from the gallery.</li>
+<li>Evaluation uses <strong>public</strong> LFW only.</li>
+</ul>
+<p><strong>Data version control</strong></p>
+<ul>
+<li>Code + this PRD on <strong>GitHub</strong> (from 6 Sept).</li>
+<li>Weights via documented download URLs / Git LFS if required; do not
+commit raw LFW if the licence forbids redistribution — scripts download
+it.</li>
+<li><code>reports/evaluation.json</code> versioned so the API threshold
+is reproducible.</li>
+</ul>
+<hr />
+<h1 id="track-specific-requirements">7. Track-Specific Requirements</h1>
+<p><strong>Tracks A–C are not in scope.</strong> This project fills
+<strong>7.4 Track D: Multimodal AI</strong> only.</p>
+<h2 id="track-d-multimodal-ai">7.4 Track D: Multimodal AI</h2>
+<h3 id="multimodal-data-fusion">Multimodal data fusion</h3>
+<p>Two streams at check-in:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Stream</th>
+<th>Modality</th>
+<th>What it answers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A — appearance</strong></td>
+<td>Single RGB face crop</td>
+<td><em>Who is this?</em> (embedding + gallery cosine)</td>
+</tr>
+<tr>
+<td><strong>B — temporal liveness</strong></td>
+<td>Short burst of frames (eye-openness / blink)</td>
+<td><em>Is this a live person or a still photo?</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Fusion strategy (v1): late fusion.</strong> Each stream
+produces its own decision (<code>identity_ok</code>,
+<code>live_ok</code>). Attendance is granted only if
+<strong>both</strong> pass. We do <strong>not</strong> train a
+cross-attention vision-language transformer for v1 (overkill and slow on
+CPU). Early pixel fusion is not used because blink is a <em>time</em>
+signal, not a second camera.</p>
+<p>This is multimodal in the OJT sense: <strong>spatial identity +
+temporal motion</strong>, not text+image RAG.</p>
+<h3 id="model-architecture">Model architecture</h3>
+<pre><code>RGB frame(s)
+    ├─► SCRFD detector ─► 5-pt align ─► ArcFace/FaceNet encoder ─► 512-D embedding
+    │                                                      └─► cosine vs gallery ─► identity_ok
+    └─► eye-crop sequence (from landmarks) ─► blink / openness heuristic ─► live_ok
+
+late AND  →  mark present</code></pre>
+<ul>
+<li><strong>Identity encoder:</strong> InsightFace ArcFace
+<code>w600k_r50</code> (ResNet-50) as the default served model if it
+wins TAR@FAR; FaceNet Inception-ResNet-v1 as baseline comparison.</li>
+<li><strong>Detector:</strong> SCRFD-10GF (not MTCNN-only).</li>
+<li>No CLIP / ViLT in the initial PRD.</li>
+</ul>
+<p><strong>Domain references (Computer Vision)</strong></p>
+<ol type="1">
+<li>Schroff, Kalenichenko, Philbin. <em>FaceNet: A Unified Embedding for
+Face Recognition and Clustering.</em> CVPR 2015.<br />
+</li>
+<li>Deng, Guo, Xue, Zafeiriou. <em>ArcFace: Additive Angular Margin Loss
+for Deep Face Recognition.</em> CVPR 2019.<br />
+</li>
+<li>Huang et al. <em>Labeled Faces in the Wild</em> (dataset /
+protocol).<br />
+</li>
+<li>(Liveness) treat printed-photo / screen replay as the spoof class;
+v1 uses a <strong>challenge blink</strong> plus simple texture/freeze
+cues — not a certified ISO PAD product.</li>
+</ol>
+<h3 id="explainable-ai-xai-latency">Explainable AI (XAI) &amp;
+latency</h3>
+<p><strong>v1 (must have)</strong></p>
+<ul>
+<li>Show <strong>similarity score</strong> and <strong>matched
+name</strong> on success.</li>
+<li>Show a <strong>reason code</strong> on failure
+(<code>no_face</code>, <code>multiple_faces</code>,
+<code>below_threshold</code>, <code>liveness_failed</code>).</li>
+<li>Operator <strong>lab page</strong> (Month 2): verify two photos and
+see the cosine — a simple explanation of “why match / why not”.</li>
+</ul>
+<p><strong>Month 3 (stretch, not required for PRD approval)</strong></p>
+<ul>
+<li>Overlay detection box + landmarks on the captured frame.</li>
+<li>Optional Grad-CAM on the aligned crop for a lab screenshot in the
+demo video.</li>
+</ul>
+<p><strong>Latency</strong></p>
+<ul>
+<li>Keep gallery <strong>exact cosine</strong> (no ANN) while N is
+small.</li>
+<li>ONNX Runtime on CPU; avoid loading two heavy encoders in one
+process.</li>
+<li>Dashboard data from SQL aggregates, not by re-running the
+model.</li>
+</ul>
+<hr />
+<h1 id="testing-qa-validation-strategy">8. Testing, QA &amp; Validation
+Strategy</h1>
+<p><strong>Unit &amp; integration testing</strong></p>
+<ul>
+<li>Pytest for API contracts: login, enroll, check-in decision shape,
+CSV export, role 403s.</li>
+<li>Frontend: a small Vitest/React Testing Library set for login and
+dashboard rendering.</li>
+<li>Fake encoder in CI so tests do not download ArcFace weights.</li>
+</ul>
+<p><strong>Model validation &amp; benchmarks</strong></p>
+<ul>
+<li>LFW View 2: 10-fold accuracy; <strong>TAR at FAR = 1e-2, 1e-3,
+1e-4</strong>.</li>
+<li>Serve the encoder with the best <strong>TAR@FAR =
+1e-3</strong>.</li>
+<li>Adversarial / spoof: still-photo burst must fail blink; frozen
+identical frames must not count as live (Month 2 tests).</li>
+<li>Data leakage: training identities must not overlap LFW when any
+fine-tune is attempted.</li>
+</ul>
+<p><strong>Edge cases</strong></p>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Expected behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No face / too dark</td>
+<td>Reject; tell user to face the camera</td>
+</tr>
+<tr>
+<td>Two people in frame</td>
+<td>Reject (do not guess)</td>
+</tr>
+<tr>
+<td>Unknown visitor</td>
+<td><code>no_match</code>; not marked present</td>
+</tr>
+<tr>
+<td>Deactivated person</td>
+<td>Must not match</td>
+</tr>
+<tr>
+<td>Camera permission denied</td>
+<td>UI error; no silent fake success</td>
+</tr>
+<tr>
+<td>API down</td>
+<td>Frontend error state; no corrupted attendance row</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="deployment-cicd-strategy">9. Deployment &amp; CI/CD
+Strategy</h1>
+<p><strong>Version control (from 6 September)</strong></p>
+<ul>
+<li>GitHub repo: <code>main</code> (demo-stable) +
+<code>development</code> + short <code>feature/*</code> branches.</li>
+<li>PRs into <code>development</code>; tag a release before each
+viva.</li>
+</ul>
+<p><strong>Containerization</strong></p>
+<ul>
+<li><code>Dockerfile</code> for API; frontend <code>npm run build</code>
+served as static files (Nginx or FastAPI static).</li>
+<li><code>docker-compose.yml</code> for local Postgres + API (Month
+3).</li>
+</ul>
+<p><strong>CI/CD &amp; live link</strong></p>
+<ul>
+<li>GitHub Actions: <code>pytest</code> + frontend build on push.</li>
+<li><strong>Live URL</strong> required by <strong>25 November</strong>
+(Render/Railway/HF Spaces or equivalent).</li>
+<li>Demo video: check-in happy path + dashboard + one failure case
+(photo / no face).</li>
+</ul>
+<hr />
+<h1 id="project-milestones-evaluation-roadmap">10. Project Milestones
+&amp; Evaluation Roadmap</h1>
+<p>Aligned with the OJT calendar and the assigned month-by-month
+brief.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Phase / evaluation</th>
+<th>Milestones &amp; deliverables</th>
+<th>Deadline</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PRD approval</strong></td>
+<td>This initial PRD submitted, reviewed, revised if asked</td>
+<td><strong>30 Aug – 3 Sept 2026</strong></td>
+</tr>
+<tr>
+<td><strong>GitHub base setup</strong></td>
+<td>Repo, README, folder layout (<code>frontend/</code>,
+<code>backend/</code>, <code>scripts/</code>, <code>docs/</code>),
+<code>.env.example</code></td>
+<td><strong>6 September 2026</strong></td>
+</tr>
+<tr>
+<td><strong>Viva 1 (Month 1)</strong></td>
+<td>LFW download + detect/align/embed pipeline; FaceNet <em>or</em>
+ArcFace baseline; TAR@FAR table; FastAPI health + enroll/verify stubs;
+JWT login skeleton</td>
+<td><strong>15–22 September 2026</strong></td>
+</tr>
+<tr>
+<td><strong>Viva 2 (Month 2)</strong></td>
+<td>Web app wired to API: enroll UI, webcam check-in, Today dashboard,
+CSV export; blink liveness late-fusion; accuracy tested against LFW
+threshold; start automated API tests</td>
+<td><strong>15–22 October 2026</strong></td>
+</tr>
+<tr>
+<td><strong>Viva 3 (Month 3)</strong></td>
+<td>End-to-end polish (responsive UI, dark mode); unit + integration
+tests; Docker; first cloud deploy rehearsal; model card + README</td>
+<td><strong>15–22 November 2026</strong></td>
+</tr>
+<tr>
+<td><strong>Final deliverables</strong></td>
+<td>Public live link + demo video</td>
+<td><strong>25 November 2026</strong></td>
+</tr>
+<tr>
+<td><strong>External final viva</strong></td>
+<td>Defence, code review, live demo</td>
+<td><strong>15–22 December 2026</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Month 1 (assigned):</strong> define scope (this PRD); MERN is
+<strong>not</strong> used — scaffold is <strong>React +
+FastAPI</strong>; integrate face recognition; auth + data models; study
+FaceNet/ArcFace/LFW.</p>
+<p><strong>Month 2 (assigned):</strong> core web app + API; connect UI;
+validation; test against <strong>accuracy</strong> (LFW + live
+enroll/check-in).</p>
+<p><strong>Month 3 (assigned):</strong> integration, UI polish,
+evaluation criteria (dashboard &lt; 2 s, auth, CRUD, reports, responsive
+UI), model card, deploy, demo.</p>
+<h3 id="explicitly-out-of-scope-for-this-initial-prd">Explicitly out of
+scope for this initial PRD</h3>
+<p>These may appear later as stretch work; they are <strong>not</strong>
+promised for Viva 1–2:</p>
+<ul>
+<li>Multi-company / multi-school tenancy</li>
+<li>GPS geofence / “office location lock”</li>
+<li>HR spoof-alert case queue and email blasts</li>
+<li>Unattended kiosk PIN fallback</li>
+<li>Payroll, leave, or biometric hardware (Iris, fingerprint)</li>
+<li>Native iOS/Android apps (a PWA is optional Month 3)</li>
+<li>Training a new face encoder from scratch on a large private
+dataset</li>
+</ul>
+<hr />
+<h1 id="risk-management-constraints">11. Risk Management &amp;
+Constraints</h1>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Identified risk</th>
+<th>Impact / severity</th>
+<th>Mitigation strategy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Compute / GPU limits</strong> (laptop CPU, no GPU)</td>
+<td>High</td>
+<td>Use published ONNX ArcFace on CPU; FaceNet weights already trained;
+Colab/Kaggle only if we fine-tune; quantize / skip fine-tune if time is
+short</td>
+</tr>
+<tr>
+<td><strong>API / cloud cost</strong></td>
+<td>Medium</td>
+<td>SQLite locally; free-tier host; no paid face-API vendor; cache
+embeddings so check-in does not re-enroll</td>
+</tr>
+<tr>
+<td><strong>Data scarcity / imbalance</strong> (few enrollment
+shots)</td>
+<td>Medium</td>
+<td>Require 2–5 photos per person at enroll; LFW for <em>model</em>
+eval, not as the workplace gallery; transfer learning only if Month 2
+has spare time</td>
+</tr>
+<tr>
+<td><strong>False reject</strong> (real person marked unknown)</td>
+<td>High</td>
+<td>Calibrate threshold on LFW TAR@FAR; allow admin to re-enroll; show
+retry copy, not a silent fail</td>
+</tr>
+<tr>
+<td><strong>False accept / photo spoof</strong></td>
+<td>High</td>
+<td>Late-fusion blink; reject multi-face; never mark present below
+threshold</td>
+</tr>
+<tr>
+<td><strong>Webcam / browser permissions</strong></td>
+<td>Medium</td>
+<td>Clear UI prompt; file-upload fallback for enroll (admin)</td>
+</tr>
+<tr>
+<td><strong>Licence / dataset redistribution</strong></td>
+<td>Medium</td>
+<td>Download scripts for LFW; do not commit third-party face dumps</td>
+</tr>
+<tr>
+<td><strong>Scope creep</strong></td>
+<td>High</td>
+<td>Freeze this PRD as v1; extra product ideas wait until after Viva
+2</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="appendix-a-roles-initial">Appendix A — Roles (initial)</h1>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>Can do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Admin</strong></td>
+<td>People CRUD, enroll faces, dashboard, reports, create employee
+logins</td>
+</tr>
+<tr>
+<td><strong>Employee</strong></td>
+<td>Log in, check in with camera, see own attendance</td>
+</tr>
+</tbody>
+</table>
+<p>(Operator / HR split, kiosk, TV board = later, not in this PRD.)</p>
+<h1 id="appendix-b-model-card-outline-for-month-3">Appendix B — Model
+card (outline for Month 3)</h1>
+<ul>
+<li><strong>Input:</strong> aligned RGB face crop.<br />
+</li>
+<li><strong>Output:</strong> 512-D unit embedding.<br />
+</li>
+<li><strong>Decision:</strong> cosine ≥ τ from LFW FAR = 1e-3
+<strong>and</strong> liveness pass.<br />
+</li>
+<li><strong>Limitations:</strong> lighting, masks, large pose,
+lookalikes, non-certified anti-spoof.<br />
+</li>
+<li><strong>Ethics:</strong> use only with workplace/school notice;
+delete embeddings when a person leaves.</li>
+</ul>
+<hr />
+<p><em>End of initial PRD v1.0 — Face Attendance System (Multimodal
+AI).</em></p>
+</body>
+</html>
