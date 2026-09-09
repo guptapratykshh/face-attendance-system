@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: frs
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-frs}
+      POSTGRES_DB: frs
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U frs"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      FRS_DATABASE_URL: postgresql+psycopg://frs:${POSTGRES_PASSWORD:-frs}@postgres:5432/frs
+      FRS_SECRET_KEY: ${FRS_SECRET_KEY:?set FRS_SECRET_KEY}
+      FRS_ADMIN_PASSWORD: ${FRS_ADMIN_PASSWORD:?set FRS_ADMIN_PASSWORD}
+      FRS_ALLOW_PUBLIC_REGISTER: "false"
+      FRS_REQUIRE_LIVENESS: "true"
+      FRS_RATE_LIMIT: "true"
+      FRS_TZ: ${FRS_TZ:-Asia/Kolkata}
+      FRS_CORS_ORIGINS: ${FRS_CORS_ORIGINS:-http://localhost,http://127.0.0.1}
+      FRS_DEVICE: cpu
+      FRS_ENCODER: ${FRS_ENCODER:-arcface}
+    volumes:
+      - ./weights:/app/weights
+      - ./reports:/app/reports
+      - ./checkpoints:/app/checkpoints
+    expose:
+      - "8000"
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+
+volumes:
+  pgdata:
