@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-soft: var(--soft);
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f4f4f5;
+  --panel: #ffffff;
+  --ink: #18181b;
+  --muted: #71717a;
+  --line: #e4e4e7;
+  --accent: #18181b;
+  --accent-fg: #fafafa;
+  --soft: #f4f4f5;
+}
+
+html.dark {
+  color-scheme: dark;
+  --bg: #09090b;
+  --panel: #18181b;
+  --ink: #fafafa;
+  --muted: #a1a1aa;
+  --line: #3f3f46;
+  --accent: #fafafa;
+  --accent-fg: #18181b;
+  --soft: #27272a;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--bg);
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+.mono {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.table-wrap {
+  max-height: min(32rem, calc(100dvh - 14rem));
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.table-wrap table {
+  width: 100%;
+  font-size: 0.875rem;
+  border-collapse: collapse;
+}
+
+.table-wrap th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--soft);
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.7rem 1rem;
+}
+
+.table-wrap td {
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.table-wrap tbody tr:hover td {
+  background: var(--soft);
+}
+
+@keyframes scan-sweep {
+  0% {
+    top: 16%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: 78%;
+    opacity: 0;
+  }
+}
+
+@keyframes scan-grid {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 48px;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scan-line {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  animation: scan-sweep 2.4s ease-in-out infinite;
+}
+
+.scan-hero {
+  background-image:
+    linear-gradient(color-mix(in srgb, currentColor 12%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, currentColor 12%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: scan-grid 12s linear infinite;
+}
+
+.toast-enter {
+  animation: toast-in 0.2s ease-out;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--soft) 25%, var(--line) 50%, var(--soft) 75%);
+  background-size: 200% 100%;
+  animation: scan-grid 1.2s linear infinite;
+}
