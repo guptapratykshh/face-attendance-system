@@ -3,12 +3,13 @@ services:
     image: postgis/postgis:16-3.4
     environment:
       POSTGRES_USER: frs
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-frs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       POSTGRES_DB: frs
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      # Loopback only: alembic and the PostGIS tests reach it, the network cannot.
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U frs"]
       interval: 5s
@@ -23,7 +24,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      FRS_DATABASE_URL: postgresql+psycopg://frs:${POSTGRES_PASSWORD:-frs}@postgres:5432/frs
+      FRS_DATABASE_URL: postgresql+psycopg://frs:${POSTGRES_PASSWORD}@postgres:5432/frs
       FRS_SECRET_KEY: ${FRS_SECRET_KEY:?set FRS_SECRET_KEY}
       FRS_ADMIN_PASSWORD: ${FRS_ADMIN_PASSWORD:?set FRS_ADMIN_PASSWORD}
       FRS_ALLOW_PUBLIC_REGISTER: "false"

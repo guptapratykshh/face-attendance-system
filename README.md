@@ -107,9 +107,11 @@ Open http://localhost:5173. Default operator: `admin` / `admin1234`. Vite proxie
 **Postgres + PostGIS (geofence production path):**
 
 ```bash
+# Choose a password once; compose refuses to start without it.
+echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)" >> .env
 docker compose up -d postgres
-# then set in .env:
-# FRS_DATABASE_URL=postgresql+psycopg://frs:frs@127.0.0.1:5432/frs
+# then set in .env, reusing the same password:
+# FRS_DATABASE_URL=postgresql+psycopg://frs:<POSTGRES_PASSWORD>@127.0.0.1:5432/frs
 alembic upgrade head
 ```
 
