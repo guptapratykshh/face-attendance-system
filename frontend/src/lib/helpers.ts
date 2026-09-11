@@ -93,14 +93,16 @@ export async function checkBlinkChallenge(
   const holdN = challenge.hold_frames ?? 8
   const blinkN = challenge.blink_frames ?? 16
   const interval = challenge.interval_ms ?? 70
-  // Runs first and alone: the probe resizes the track, so it cannot overlap frame capture.
-  onHint?.('Checking your camera…')
-  const probe = (await cam.probeCapturePath?.()) ?? null
   onHint?.('Keep your eyes open…')
   await sleep(holdMs)
   const hold = await cam.captureBurst(holdN, interval)
   onHint?.('Blink once now…')
   const action = await cam.captureBurst(blinkN, interval)
+  // Probe last, and alone. It resizes the track, so running it before capture risks handing the
+  // recogniser frames of the wrong geometry if the restore fails. Afterwards the churn lands in
+  // the wait the user already expects.
+  onHint?.('Checking your camera…')
+  const probe = (await cam.probeCapturePath?.()) ?? null
   const result = await api.checkLiveness(challenge.challenge_id, [...hold, ...action], source, probe)
   return { challengeId: challenge.challenge_id, result }
 }
