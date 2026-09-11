@@ -28,21 +28,22 @@ def _org_schemas(bind) -> list[str]:
     return [str(r) for r in rows]
 
 
-def _fk(target: str, schema: str | None) -> list[sa.ForeignKey]:
-    """Foreign keys only in public.
+def _create_captureprobe() -> None:
+    """Public only, matching 0009.
 
-    Org schemas are cloned with CREATE TABLE (LIKE ...), which does not carry constraints across,
-    and their `user` table is a per-tenant copy rather than the public one.
+    Org schemas pick the table up from provision_org_schema(), which clones tenant tables from
+    public with CREATE TABLE (LIKE ...) on the next boot.
     """
-    return [] if schema else [sa.ForeignKey(target, ondelete="SET NULL")]
-
-
-def _create_captureprobe(schema: str | None) -> None:
     op.create_table(
         "captureprobe",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("org_id", sa.Integer(), *_fk("organization.id", schema), nullable=True),
-        sa.Column("user_id", sa.Integer(), *_fk("user.id", schema), nullable=True),
+        sa.Column(
+            "org_id",
+            sa.Integer(),
+            sa.ForeignKey("organization.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column("user_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
         sa.Column("challenge_id", sa.String(length=64), nullable=True),
         sa.Column("source", sa.String(length=32), nullable=False, server_default="attendance"),
         sa.Column("score", sa.Float(), nullable=True),
@@ -53,33 +54,32 @@ def _create_captureprobe(schema: str | None) -> None:
         sa.Column("report_json", sa.Text(), nullable=True),
         sa.Column("label", sa.String(length=32), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        schema=schema,
     )
-    prefix = f"{schema}_" if schema else ""
     for col in ("org_id", "user_id", "challenge_id", "source", "label", "created_at"):
-        op.create_index(f"ix_{prefix}captureprobe_{col}", "captureprobe", [col], schema=schema)
+        op.create_index(f"ix_captureprobe_{col}", "captureprobe", [col])
 
 
 def _add_trust_columns(schema: str | None) -> None:
+    """Every schema needs these.
+
+    Unlike a missing table, provision_org_schema() will not add a missing *column* to an
+    attendance table an org schema already has, so existing tenants must be altered here.
+    """
     op.add_column("attendance", sa.Column("trust_score", sa.Float(), nullable=True), schema=schema)
     op.add_column("attendance", sa.Column("trust_breakdown_json", sa.Text(), nullable=True), schema=schema)
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    _create_captureprobe(None)
+    _create_captureprobe()
     _add_trust_columns(None)
-    for schema in _org_schemas(bind):
-        _create_captureprobe(schema)
+    for schema in _org_schemas(op.get_bind()):
         _add_trust_columns(schema)
 
 
 def downgrade() -> None:
-    bind = op.get_bind()
-    for schema in _org_schemas(bind):
+    for schema in _org_schemas(op.get_bind()):
         op.drop_column("attendance", "trust_breakdown_json", schema=schema)
         op.drop_column("attendance", "trust_score", schema=schema)
-        op.drop_table("captureprobe", schema=schema)
     op.drop_column("attendance", "trust_breakdown_json")
     op.drop_column("attendance", "trust_score")
     op.drop_table("captureprobe")
