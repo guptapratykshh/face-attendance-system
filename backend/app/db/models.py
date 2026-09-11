@@ -258,6 +258,9 @@ class Attendance(SQLModel, table=True):
     early_leave: bool = False
     latitude: float | None = None
     longitude: float | None = None
+    # Fused presence-trust probability and the per-signal contributions behind it.
+    trust_score: float | None = None
+    trust_breakdown_json: str | None = None
     checked_out_at: datetime | None = None
     created_at: datetime = Field(default_factory=utcnow, index=True)
 
@@ -319,6 +322,35 @@ class SpoofAlert(SQLModel, table=True):
     similarity: float | None = None
     image: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
     seen_at: datetime | None = None
+    created_at: datetime = Field(default_factory=utcnow, index=True)
+
+
+class CaptureProbe(SQLModel, table=True):
+    """One browser constraint-probe session, kept as the training set for virtual-camera detection.
+
+    Stored whether or not the punch succeeded: bonafide sessions are the negative class, and a
+    session that failed for an unrelated reason is still valid capture-path evidence.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    org_id: int | None = Field(default=None, sa_column=_org_id_column())
+    user_id: int | None = Field(
+        default=None,
+        sa_column=Column(
+            Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True, index=True
+        ),
+    )
+    challenge_id: str | None = Field(default=None, max_length=64, index=True)
+    source: str = Field(default="attendance", max_length=32, index=True)
+    score: float | None = None
+    live: bool | None = None
+    scored_by: str | None = Field(default=None, max_length=16)
+    reason: str | None = None
+    features_json: str | None = None
+    report_json: str | None = None
+    # Set by scripts/collect_capture_sessions.py: bonafide | virtual_static | virtual_replay |
+    # virtual_faceswap. Null for production traffic, which is unlabelled.
+    label: str | None = Field(default=None, max_length=32, index=True)
     created_at: datetime = Field(default_factory=utcnow, index=True)
 
 

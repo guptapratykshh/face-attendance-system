@@ -25,6 +25,7 @@ TENANT_TABLE_NAMES: tuple[str, ...] = (
     "accessevent",
     "holiday",
     "spoofalert",
+    "captureprobe",
     "assistchunk",
     "assistmessage",
 )
