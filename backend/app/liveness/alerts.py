@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
 
 import cv2
-
 from sqlmodel import Session, col, select
 
 from app.api.routes._common import log_event
 from app.core.mail import notify_spoof_alert
 from app.core.org_ctx import gallery_allowed_ids, get_current_org_id
 from app.core.roles import PEOPLE_ROLES
-from app.db.models import Person, SpoofAlert, User
+from app.db.models import CaptureProbe, Person, SpoofAlert, User
 from app.pipeline.face_pipeline import decode_image
 from app.runtime import runtime
 
@@ -82,6 +82,46 @@ def _staff_emails(session: Session) -> list[str]:
             seen.add(addr)
             emails.append(addr)
     return emails
+
+
+def record_capture_probe(
+    session: Session,
+    *,
+    user: User,
+    challenge_id: str | None,
+    source: str,
+    report: str | dict | None,
+    analysis: dict | None,
+    label: str | None = None,
+) -> CaptureProbe | None:
+    """Persist one probe session. Bonafide traffic is the negative class, so keep it all."""
+    if report is None:
+        return None
+    raw = report if isinstance(report, str) else json.dumps(report)
+    if len(raw) > 200_000:
+        return None
+    row = CaptureProbe(
+        org_id=get_current_org_id(),
+        user_id=int(user.id) if user.id is not None else None,
+        challenge_id=challenge_id,
+        source=source,
+        score=analysis.get("score") if analysis else None,
+        live=analysis.get("live") if analysis else None,
+        scored_by=analysis.get("scored_by") if analysis else None,
+        reason=analysis.get("reason") if analysis else None,
+        features_json=json.dumps(analysis.get("features")) if analysis else None,
+        report_json=raw,
+        label=(label or None),
+    )
+    try:
+        session.add(row)
+        session.commit()
+        session.refresh(row)
+    except Exception:
+        session.rollback()
+        log.exception("could not store capture probe")
+        return None
+    return row
 
 
 def record_spoof(

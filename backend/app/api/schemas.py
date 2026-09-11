@@ -192,6 +192,8 @@ class LivenessResponse(BaseModel):
     live: bool
     blink: dict
     texture: dict
+    # Null when the client sent no probe (older clients, or a non-browser caller).
+    capture_path: dict | None = None
     instruction: str
 
 
@@ -244,6 +246,9 @@ class AttendanceOut(BaseModel):
     occurrence_id: int | None = None
     occurrence_title: str | None = None
     site_id: int | None = None
+    # Fused presence trust, and the per-signal breakdown that explains it.
+    trust_score: float | None = None
+    trust: dict | None = None
 
 
 class AttendanceUpdate(BaseModel):

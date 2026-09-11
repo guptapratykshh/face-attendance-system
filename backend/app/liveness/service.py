@@ -7,7 +7,9 @@ import time
 from dataclasses import dataclass, field
 from random import randint
 
+from app.core.config import settings
 from app.liveness.blink import ear_from_image, timed_blink
+from app.liveness.capture_path import analyse_capture_path
 from app.liveness.texture import replay_analysis
 from app.pipeline.face_pipeline import decode_image
 
@@ -55,7 +57,7 @@ class LivenessService:
         self._sessions[challenge.id] = challenge
         return challenge
 
-    def check(self, challenge_id: str, frames: list[bytes]) -> dict:
+    def check(self, challenge_id: str, frames: list[bytes], capture_probe: str | dict | None = None) -> dict:
         self._purge()
         challenge = self._sessions.get(challenge_id)
         if challenge is None:
@@ -78,18 +80,39 @@ class LivenessService:
         action_ears = [ear_from_image(im) for im in action_imgs]
         blink = timed_blink(hold_ears, action_ears)
         texture = replay_analysis(images)
+        capture_path = analyse_capture_path(capture_probe)
         blink_ok = bool(blink.get("blink"))
         texture_ok = bool(texture.get("live"))
         live = blink_ok and texture_ok
+        # A face swap fed through OBS satisfies blink and texture by construction, so the
+        # capture-path verdict has to be able to overrule them. Off by default until a site has
+        # collected enough bonafide sessions to trust the threshold.
+        if (
+            capture_path is not None
+            and not capture_path["live"]
+            and settings.vcd_block_on_fail
+        ):
+            live = False
         challenge.resolved = True
         challenge.result = {
             "ok": True,
             "live": live,
             "blink": blink,
             "texture": texture,
+            "capture_path": capture_path,
             "instruction": challenge.instruction,
         }
         return challenge.result
+
+    def result_for(self, challenge_id: str | None) -> dict:
+        """The stored verdict for a challenge, for callers that need to fuse it with other signals.
+
+        Read-only and safe after consume_live(): the record stays until it expires.
+        """
+        if not challenge_id:
+            return {}
+        challenge = self._sessions.get(challenge_id)
+        return dict(challenge.result) if challenge is not None else {}
 
     def bind_user(self, challenge_id: str, user_id: int) -> None:
         challenge = self._sessions.get(challenge_id)

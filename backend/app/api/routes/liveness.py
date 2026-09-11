@@ -10,7 +10,7 @@ from app.api.routes._common import log_event, read_image
 from app.api.schemas import ChallengeOut, LivenessResponse
 from app.db.models import Person, User
 from app.db.session import get_session
-from app.liveness.alerts import record_spoof
+from app.liveness.alerts import record_capture_probe, record_spoof
 from app.liveness.service import SESSION_TTL_S, liveness_service
 
 router = APIRouter(prefix="/liveness", tags=["liveness"])
@@ -36,19 +36,25 @@ async def check_challenge(
     challenge_id: str = Form(...),
     frames: list[UploadFile] = File(...),
     source: str = Form(default="lab"),
+    capture_probe: str | None = Form(default=None),
+    label: str | None = Form(default=None),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ) -> LivenessResponse:
     liveness_service.bind_user(challenge_id, int(user.id))
     blobs = [await read_image(f) for f in frames]
-    result = liveness_service.check(challenge_id, blobs)
+    result = liveness_service.check(challenge_id, blobs, capture_probe)
     if not result.get("ok"):
         raise HTTPException(400, detail=result.get("detail") or result.get("code"))
     person = session.get(Person, user.person_id) if user.person_id is not None else None
     texture = result.get("texture") if isinstance(result.get("texture"), dict) else {}
+    capture_path = result.get("capture_path") if isinstance(result.get("capture_path"), dict) else None
     photo_or_screen = not bool(texture.get("live", True))
+    injected = capture_path is not None and not capture_path["live"]
     if result["live"]:
         decision = "live"
+    elif injected:
+        decision = "injected"
     elif photo_or_screen:
         decision = "spoof"
     else:
@@ -58,7 +64,19 @@ async def check_challenge(
         kind="liveness",
         decision=decision,
         person=person,
-        detail=result["blink"].get("reason") if isinstance(result.get("blink"), dict) else None,
+        detail=(capture_path or {}).get("reason")
+        if injected
+        else (result["blink"].get("reason") if isinstance(result.get("blink"), dict) else None),
+    )
+    # Every session is kept, bonafide included: the negatives are the training set.
+    record_capture_probe(
+        session,
+        user=user,
+        challenge_id=challenge_id,
+        source=source,
+        report=capture_probe,
+        analysis=capture_path,
+        label=label,
     )
     if photo_or_screen:
         record_spoof(session, user=user, frames=blobs, result=result, source=source)
@@ -66,5 +84,6 @@ async def check_challenge(
         live=result["live"],
         blink=result["blink"],
         texture=result["texture"],
+        capture_path=capture_path,
         instruction=result["instruction"],
     )
