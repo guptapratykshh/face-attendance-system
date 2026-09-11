@@ -121,6 +121,34 @@ Geofence checks use PostGIS `ST_DWithin` when the extension is available; SQLite
 
 Screens: Today dashboard, people directory, face enrollment, employee check-in, **Assist** (natural-language attendance Q&A), entrance kiosk, TV board, reports, recognition lab (ROC, TAR@FAR, verify / identify / liveness).
 
+## Presence trust (injection and proxy detection)
+
+Blink and texture checks read the *content* of a stream, so neither can see that OBS or ManyCam
+replaced the webcam — an injected face swap blinks on cue. Two extra signals cover that:
+
+- **Capture path** — before capture, the browser walks a ladder of `applyConstraints` requests and
+  records what the camera reported, rendered, and how long it took. Real sensors negotiate with a
+  driver; software cameras accept everything or sit locked. Scored in `app/liveness/capture_path.py`.
+- **Longitudinal plausibility** — impossible travel, arrival-habit deviation, clockwork punching,
+  repeat collusion partners, similarity drift. Scored in `app/risk/behaviour.py`.
+
+`app/risk/fusion.py` combines these with face match and PAD into one trust probability, stored on
+each punch as `trust_score` plus a per-signal breakdown. Fusion is a weighted **geometric** mean
+with per-signal veto floors, not an average: a face swap matches *better* than a real user, so an
+average would let the strongest signal outvote the one that catches it.
+
+```bash
+python scripts/simulate_attendance_fraud.py --out data/fraud_sim.jsonl
+python scripts/evaluate_trust.py --fraud data/fraud_sim.jsonl   # ablation table
+python scripts/collect_capture_sessions.py --fit weights/vcd_model.joblib
+```
+
+Set `FRS_VCD_BLOCK_ON_FAIL=true` to reject a failed capture path outright rather than only lowering
+trust. Leave it off until a site has collected enough bonafide sessions to trust the threshold.
+
+Research positioning and the competitor analysis behind this work:
+[docs/research/competitive-and-literature-analysis.md](docs/research/competitive-and-literature-analysis.md).
+
 ## Product requirements
 
 The workplace product (roles, journeys, geofence, kiosk, acceptance criteria) is documented here:
@@ -152,7 +180,7 @@ API tests use a fake encoder so they do not load FaceNet/InsightFace.
 | POST | `/persons/{id}/enroll` | 1–5 face images |
 | POST | `/assist/chat` | HR Assist Q&A (LLM + retrieval; needs `FRS_LLM_API_KEY`) |
 | GET | `/assist/history` | Assist chat history |
-| POST | `/liveness/challenge` `/liveness/check` | blink + texture PAD |
+| POST | `/liveness/challenge` `/liveness/check` | blink + texture PAD + capture-path check |
 | GET | `/metrics` | evaluation.json for the dashboard |
 | GET | `/events` | access log |
 | GET | `/health` `/ready` | encoder, gallery size, thresholds |
