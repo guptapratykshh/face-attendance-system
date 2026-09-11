@@ -9,12 +9,38 @@ from fastapi.responses import Response
 from sqlmodel import Session, col, func, select
 
 from app.api.deps import require_org, require_people, require_staff
-from app.api.schemas import AbsenceStreakOut, AttendanceOut, BoardPersonOut, OpsSummaryOut, SessionTodayOut, SpoofAlertOut
+from app.api.schemas import (
+    AbsenceStreakOut,
+    AttendanceOut,
+    BoardPersonOut,
+    OpsSummaryOut,
+    SessionTodayOut,
+    SpoofAlertOut,
+)
 from app.core.attendance_policy import allow_checkout, kernel_of, occurrence_is_open, profile_dict
-from app.core.clock import as_local_date, expected_workday, now_local, office_settings, parse_hhmm, today_local
+from app.core.clock import (
+    as_local_date,
+    expected_workday,
+    now_local,
+    office_settings,
+    parse_hhmm,
+    today_local,
+)
 from app.core.mail import notify_absence
 from app.core.org_ctx import belongs_to_org, get_current_org_id, scoped
-from app.db.models import AccessEvent, Attendance, Enrollment, FaceEmbedding, Occurrence, Offering, Organization, Person, SpoofAlert, User, utcnow
+from app.db.models import (
+    AccessEvent,
+    Attendance,
+    Enrollment,
+    FaceEmbedding,
+    Occurrence,
+    Offering,
+    Organization,
+    Person,
+    SpoofAlert,
+    User,
+    utcnow,
+)
 from app.db.session import get_session
 
 router = APIRouter(prefix="/ops", tags=["ops"])

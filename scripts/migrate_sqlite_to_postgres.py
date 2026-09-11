@@ -12,7 +12,15 @@ import argparse
 from pathlib import Path
 
 from app.core.config import PROJECT_ROOT, settings
-from app.db.models import AccessEvent, AppSetting, Attendance, FaceEmbedding, Person, SpoofAlert, User
+from app.db.models import (
+    AccessEvent,
+    AppSetting,
+    Attendance,
+    FaceEmbedding,
+    Person,
+    SpoofAlert,
+    User,
+)
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, create_engine, select
 

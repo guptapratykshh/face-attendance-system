@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlmodel import Session, func, select
 
 from app.api.deps import AuthUser, get_current_user
-from app.api.routes._common import clean_optional, commit_or_conflict, ensure_unique_employee_id, ensure_unique_username
+from app.api.routes._common import (
+    clean_optional,
+    commit_or_conflict,
+    ensure_unique_employee_id,
+    ensure_unique_username,
+)
 from app.api.schemas import (
     AuthConfigOut,
     LinkedPersonOut,

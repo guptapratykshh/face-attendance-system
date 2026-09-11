@@ -19,7 +19,16 @@ from app.api.routes._common import (
     person_out,
     read_image,
 )
-from app.api.schemas import AttendanceOut, EventOut, ImportResult, PersonCreate, PersonLoginIn, PersonOut, PersonTimelineOut, PersonUpdate
+from app.api.schemas import (
+    AttendanceOut,
+    EventOut,
+    ImportResult,
+    PersonCreate,
+    PersonLoginIn,
+    PersonOut,
+    PersonTimelineOut,
+    PersonUpdate,
+)
 from app.core.mail import notify_face_enrolled
 from app.core.org_ctx import belongs_to_org, require_org_id, scoped
 from app.core.security import hash_password

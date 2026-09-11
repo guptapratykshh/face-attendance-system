@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from sqlmodel import select
-
 from app.db import session as db_session
 from app.db.models import Organization
+from sqlmodel import select
+
 from tests.helpers import png_bytes
 
 
@@ -1006,11 +1006,10 @@ def test_org_admin_username_does_not_shadow_platform_admin(client, auth):
 
 def test_postgres_org_schema_has_no_foreign_people(client, auth, default_org_id):
     import pytest
-    from sqlalchemy import text
-
     from app.core.config import settings
     from app.db.session import SessionLocal
     from app.db.tenancy import schema_name
+    from sqlalchemy import text
 
     if settings.is_sqlite:
         pytest.skip("Postgres schema-per-org only")

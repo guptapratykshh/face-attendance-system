@@ -10,10 +10,10 @@ from app.api.routes import (
     ops,
     orgs,
     persons,
+    schedule,
     settings,
     users,
     verify,
-    schedule,
 )
 
 __all__ = [

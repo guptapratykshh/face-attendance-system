@@ -10,12 +10,12 @@ from app.core.security import hash_password
 from app.db import session as db_session
 from app.db.models import Organization, PlatformUser
 from app.db.session import configure_engine, init_db
-from sqlmodel import select
 from app.gallery.index import FaceGallery
 from app.pipeline.detector import Detection
 from app.pipeline.face_pipeline import FaceResult, decode_image
 from app.runtime import runtime
 from fastapi.testclient import TestClient
+from sqlmodel import select
 
 from tests.helpers import FakeEncoder
 

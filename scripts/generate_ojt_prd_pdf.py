@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+from reportlab.lib.enums import TA_JUSTIFY, TA_LEFT
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
@@ -181,7 +181,6 @@ def build() -> Path:
     body, bold = _register_fonts()
     styles = _styles(body, bold)
     story: list = []
-    W = 7.0 * inch  # usable width approx
 
     # ---------- cover ----------
     story.append(Paragraph("Product Requirement Document (PRD)", styles["title"]))

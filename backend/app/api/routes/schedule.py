@@ -22,7 +22,16 @@ from app.api.schemas import (
 from app.core.attendance_policy import kernel_of, occurrence_is_open, present_for_occurrence
 from app.core.clock import office_settings, today_local
 from app.core.org_ctx import belongs_to_org, require_org_id, scoped
-from app.db.models import Attendance, Enrollment, Occurrence, Offering, Organization, Person, Site, User
+from app.db.models import (
+    Attendance,
+    Enrollment,
+    Occurrence,
+    Offering,
+    Organization,
+    Person,
+    Site,
+    User,
+)
 from app.db.session import get_session
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
