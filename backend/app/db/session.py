@@ -110,6 +110,8 @@ def _ensure_sqlite_columns() -> None:
     _sqlite_add_column("holiday", "org_id", "INTEGER REFERENCES organization(id)")
     _sqlite_add_column("spoofalert", "org_id", "INTEGER REFERENCES organization(id)")
     _sqlite_add_column("organization", "slug", "VARCHAR(64)")
+    _sqlite_add_column("attendance", "trust_score", "FLOAT")
+    _sqlite_add_column("attendance", "trust_breakdown_json", "TEXT")
     _sqlite_username_per_org()
 
 
