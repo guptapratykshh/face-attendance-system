@@ -86,6 +86,19 @@ class Settings(BaseSettings):
     ear_closed_thresh: float = 0.21
     ear_open_thresh: float = 0.28
     spoof_score_thresh: float = 0.5
+    # Capture-path (virtual camera) score above which the stream is treated as injected.
+    vcd_score_thresh: float = 0.5
+    # Reject a check-in outright when the capture path fails, rather than only lowering trust.
+    vcd_block_on_fail: bool = False
+
+    # Presence-trust fusion
+    trust_thresh: float = 0.5
+    # Any single signal below this vetoes the punch, however strong the others are.
+    trust_signal_floor: float = 0.25
+    trust_weight_face: float = 0.30
+    trust_weight_pad: float = 0.25
+    trust_weight_vcd: float = 0.25
+    trust_weight_behaviour: float = 0.20
 
     # LLM Assist (OpenAI-compatible)
     llm_api_key: str | None = None
