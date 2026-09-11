@@ -260,8 +260,9 @@ def behaviour_risk(features: dict[str, float | int | None]) -> dict:
         cues.append("face match is weaker than usual for this person")
 
     risk = min(risk, 1.0)
-    if n < 5:
-        # Too little history to accuse anyone; damp the score toward neutral.
+    if n < 5 and cues:
+        # Too little history to accuse anyone; damp the score toward neutral. Only worth saying
+        # when something actually fired, otherwise it reads as a finding in the HR view.
         risk *= 0.4
         cues.append("limited history, score damped")
 
