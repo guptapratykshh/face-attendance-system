@@ -130,10 +130,18 @@ export type Challenge = {
   interval_ms?: number
 }
 
+export type CapturePathResult = {
+  live: boolean
+  score: number
+  reason: string
+  features: Record<string, number | null>
+}
+
 export type LivenessResponse = {
   live: boolean
   blink: Record<string, unknown>
   texture: Record<string, unknown>
+  capture_path?: CapturePathResult | null
   instruction: string
 }
 

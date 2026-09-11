@@ -1,5 +1,6 @@
 import { api } from '../api/client'
 import type { LivenessResponse } from '../api/types'
+import type { CaptureProbeReport } from './captureProbe'
 
 function isoDay(d: Date) {
   const y = d.getFullYear()
@@ -77,8 +78,13 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+export type BlinkCam = {
+  captureBurst: (n: number, intervalMs: number) => Promise<Blob[]>
+  probeCapturePath?: () => Promise<CaptureProbeReport | null>
+}
+
 export async function checkBlinkChallenge(
-  cam: { captureBurst: (n: number, intervalMs: number) => Promise<Blob[]> },
+  cam: BlinkCam,
   onHint?: (message: string) => void,
   source = 'lab',
 ): Promise<{ challengeId: string; result: LivenessResponse }> {
@@ -87,22 +93,30 @@ export async function checkBlinkChallenge(
   const holdN = challenge.hold_frames ?? 8
   const blinkN = challenge.blink_frames ?? 16
   const interval = challenge.interval_ms ?? 70
+  // Runs first and alone: the probe resizes the track, so it cannot overlap frame capture.
+  onHint?.('Checking your camera…')
+  const probe = (await cam.probeCapturePath?.()) ?? null
   onHint?.('Keep your eyes open…')
   await sleep(holdMs)
   const hold = await cam.captureBurst(holdN, interval)
   onHint?.('Blink once now…')
   const action = await cam.captureBurst(blinkN, interval)
-  const result = await api.checkLiveness(challenge.challenge_id, [...hold, ...action], source)
+  const result = await api.checkLiveness(challenge.challenge_id, [...hold, ...action], source, probe)
   return { challengeId: challenge.challenge_id, result }
 }
 
 export async function runBlinkChallenge(
-  cam: { captureBurst: (n: number, intervalMs: number) => Promise<Blob[]> },
+  cam: BlinkCam,
   onHint?: (message: string) => void,
   source = 'attendance',
 ): Promise<string> {
   const { challengeId, result } = await checkBlinkChallenge(cam, onHint, source)
   if (!result.live) {
+    if (result.capture_path && result.capture_path.live === false) {
+      throw new Error(
+        'This camera does not look like real hardware. Check in from the device camera, not a virtual one.',
+      )
+    }
     const textureReason = typeof result.texture?.reason === 'string' ? result.texture.reason : ''
     if (
       textureReason.includes('frozen') ||

@@ -170,10 +170,11 @@ export const api = {
   },
 
   issueChallenge: () => unwrap<Challenge>(client.post('/liveness/challenge')),
-  checkLiveness: (challengeId: string, frames: Blob[], source = 'lab') => {
+  checkLiveness: (challengeId: string, frames: Blob[], source = 'lab', probe?: unknown) => {
     const fd = new FormData()
     fd.append('challenge_id', challengeId)
     fd.append('source', source)
+    if (probe) fd.append('capture_probe', JSON.stringify(probe))
     frames.forEach((b, i) => fd.append('frames', b, `frame-${i}.jpg`))
     return unwrap<LivenessResponse>(client.post('/liveness/check', fd))
   },

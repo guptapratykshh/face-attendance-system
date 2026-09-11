@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { runCaptureProbe, type CaptureProbeReport } from '../lib/captureProbe'
+
 function isAbort(err: unknown) {
   return err instanceof Error && (err.name === 'AbortError' || /interrupted by a new load request/i.test(err.message))
 }
@@ -124,7 +126,23 @@ export function useWebcam() {
     return frames
   }, [])
 
+  /**
+   * Probe the capture path for virtual-camera evidence. Resolution changes while it runs, so never
+   * overlap it with capture() or captureBurst().
+   */
+  const probeCapturePath = useCallback(async (): Promise<CaptureProbeReport | null> => {
+    const stream = streamRef.current
+    const video = videoRef.current
+    if (!stream || !video) return null
+    try {
+      return await runCaptureProbe(stream, video)
+    } catch {
+      // Never block a check-in because the probe failed; the server scores a missing probe.
+      return null
+    }
+  }, [])
+
   useEffect(() => () => stop(), [stop])
 
-  return { videoRef, ready, error, start, stop, capture, captureBurst }
+  return { videoRef, ready, error, start, stop, capture, captureBurst, probeCapturePath }
 }
