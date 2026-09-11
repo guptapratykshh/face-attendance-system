@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import csv
 import io
+import json
+import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
@@ -36,7 +38,11 @@ from app.db.models import Attendance, Occurrence, Organization, Person, User
 from app.db.session import get_session
 from app.encoders.base import FaceEncoder
 from app.liveness.service import liveness_service
+from app.risk.behaviour import behaviour_features, behaviour_risk
+from app.risk.fusion import presence_trust
 from app.runtime import Runtime
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
 
@@ -74,7 +80,20 @@ def _attendance_out(
         occurrence_id=getattr(row, "occurrence_id", None),
         occurrence_title=title,
         site_id=getattr(row, "site_id", None),
+        trust_score=None if row.trust_score is None else round(float(row.trust_score), 4),
+        trust=_trust_breakdown(row),
     )
+
+
+def _trust_breakdown(row: Attendance) -> dict | None:
+    raw = getattr(row, "trust_breakdown_json", None)
+    if not raw:
+        return None
+    try:
+        parsed = json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
 
 
 def _todays_present(session: Session, person_id: int) -> Attendance | None:
@@ -88,6 +107,55 @@ def _require_live(challenge_id: str | None, user_id: int) -> None:
         raise HTTPException(400, detail="liveness_required")
     if not liveness_service.consume_live(challenge_id, user_id):
         raise HTTPException(400, detail="liveness_required")
+
+
+def _score_trust(
+    session: Session,
+    row: Attendance,
+    *,
+    challenge_id: str | None,
+    threshold: float,
+) -> dict | None:
+    """Attach the fused presence-trust score to a saved punch.
+
+    Advisory for now: it records and explains risk for HR review rather than blocking, because the
+    behaviour weights are tuned on synthetic fraud until a site has real labelled history.
+    """
+    if row.id is None or row.person_id is None:
+        return None
+    liveness = liveness_service.result_for(challenge_id)
+    try:
+        behaviour = behaviour_risk(
+            behaviour_features(
+                session,
+                person_id=int(row.person_id),
+                at=row.created_at,
+                lat=row.latitude,
+                lng=row.longitude,
+                site_id=row.site_id,
+                similarity=row.similarity,
+            )
+        )
+        trust = presence_trust(
+            similarity=row.similarity,
+            threshold=threshold,
+            liveness=liveness.get("texture") if isinstance(liveness.get("texture"), dict) else None,
+            capture_path=liveness.get("capture_path")
+            if isinstance(liveness.get("capture_path"), dict)
+            else None,
+            behaviour=behaviour,
+        )
+    except Exception:
+        log.exception("could not score presence trust")
+        return None
+
+    trust["behaviour"] = behaviour
+    row.trust_score = trust.get("trust")
+    row.trust_breakdown_json = json.dumps(trust)
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return trust
 
 
 def _parse_coord(value: str | None) -> float | None:
@@ -209,6 +277,7 @@ async def check_in(
 
         set_punch_geom(session, int(row.id), lat, lng)
         session.commit()
+    _score_trust(session, row, challenge_id=challenge_id, threshold=rt.verify_threshold)
     log_event(
         session,
         kind="attendance",
@@ -398,6 +467,7 @@ async def kiosk_punch(
 
         set_punch_geom(session, int(row.id), lat, lng)
         session.commit()
+    _score_trust(session, row, challenge_id=challenge_id, threshold=rt.identify_threshold)
     log_event(
         session,
         kind="attendance",
