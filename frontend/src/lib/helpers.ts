@@ -26,7 +26,12 @@ export function datePreset(kind: 'today' | 'week' | 'month') {
 export async function downloadAuthCsv(url: string, filename: string) {
   const token = localStorage.getItem('frs_token')
   if (!token) return
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
+  if (localStorage.getItem('frs_is_platform') === '1' && localStorage.getItem('frs_org_id')) {
+    headers['X-Org-Id'] = localStorage.getItem('frs_org_id')!
+  }
+  const res = await fetch(url, { headers })
+  if (!res.ok) throw new Error(`CSV download failed (${res.status})`)
   const blob = await res.blob()
   const href = URL.createObjectURL(blob)
   const a = document.createElement('a')

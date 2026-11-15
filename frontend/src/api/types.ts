@@ -206,6 +206,24 @@ export type AttendanceRecord = {
   site_id?: number | null
 }
 
+export type ClassroomScan = {
+  occurrence_id: number
+  title: string
+  roster_size: number
+  face_ready: number
+  detected: number
+  marked: number
+  already_marked: number
+  faces: {
+    bbox: number[]
+    status: 'marked' | 'already_marked' | 'duplicate' | 'unknown' | 'low_quality'
+    person_id: number | null
+    name: string | null
+    similarity: number | null
+    quality: Record<string, number>
+  }[]
+}
+
 export type SessionToday = {
   id: number
   title: string

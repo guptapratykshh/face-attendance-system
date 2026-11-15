@@ -2,6 +2,7 @@ import axios, { AxiosError } from 'axios'
 import {
   ApiError,
   type AttendanceRecord,
+  type ClassroomScan,
   type AuthConfig,
   type Challenge,
   type EvalReport,
@@ -168,6 +169,12 @@ export const api = {
     fd.append('image', image)
     return unwrap<IdentifyResponse>(client.post(`/identify?top_k=${topK}`, fd))
   },
+  scanClassroom: (occurrenceId: number, image: File) => {
+    const fd = new FormData()
+    fd.append('image', image)
+    return unwrap<ClassroomScan>(client.post(`/classroom/${occurrenceId}/scan`, fd))
+  },
+  classroomCsvUrl: (occurrenceId: number) => `/api/v1/classroom/${occurrenceId}/export`,
 
   issueChallenge: () => unwrap<Challenge>(client.post('/liveness/challenge')),
   checkLiveness: (challengeId: string, frames: Blob[], source = 'lab', probe?: unknown) => {

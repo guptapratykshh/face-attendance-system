@@ -86,6 +86,9 @@ export function Layout() {
     if (org.needsSchedule) {
       links.push({ to: '/schedule', label: org.kernel === 'shift' ? 'Shifts' : org.kernel === 'visit' ? 'Events' : 'Timetable', icon: IconDays })
     }
+    if (org.kernel === 'session') {
+      links.push({ to: '/classroom', label: 'Classroom scan', icon: IconFace })
+    }
   }
   if (staff && orgOpen) {
     links.push(

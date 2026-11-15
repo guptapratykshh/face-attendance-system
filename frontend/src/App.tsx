@@ -6,6 +6,7 @@ import { useAuth } from './hooks/useAuth'
 import { AssistPage } from './pages/Assist'
 import { AttendancePage } from './pages/Attendance'
 import { BoardPage } from './pages/Board'
+import { ClassroomPage } from './pages/Classroom'
 import { DashboardPage } from './pages/Dashboard'
 import { EnrollPage } from './pages/Enroll'
 import { EventsPage } from './pages/Events'
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/assist" element={<AssistPage />} />
         <Route path="/schedule" element={<SchedulePage />} />
+        <Route path="/classroom" element={<ClassroomPage />} />
       </Route>
       <Route
         element={
