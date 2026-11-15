@@ -13,6 +13,7 @@ from app.api.routes import (
     assist,
     attendance,
     auth,
+    classroom,
     events,
     holidays,
     identify,
@@ -143,6 +144,7 @@ def create_app(*, boot: bool = True) -> FastAPI:
     app.include_router(metrics.router, prefix=prefix)
     app.include_router(events.router, prefix=prefix)
     app.include_router(attendance.router, prefix=prefix)
+    app.include_router(classroom.router, prefix=prefix)
     app.include_router(ops.router, prefix=prefix)
     app.include_router(office.router, prefix=prefix)
     app.include_router(users.router, prefix=prefix)
