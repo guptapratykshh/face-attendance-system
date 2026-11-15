@@ -6,13 +6,13 @@ import json
 
 import pytest
 from app.core.config import settings
+from app.db import session as db_session
 from app.db.models import Organization
-from app.db.session import SessionLocal
 from sqlmodel import select
 
 
 def _default_slug() -> str:
-    with SessionLocal() as session:
+    with db_session.SessionLocal() as session:
         org = session.exec(select(Organization).order_by(Organization.id)).first()
         assert org is not None and org.slug
         return org.slug
@@ -42,7 +42,12 @@ def test_assist_requires_llm_key(client, auth, monkeypatch):
 def test_assist_forbidden_for_employee(client, auth, llm_key):
     client.post(
         "/api/v1/auth/register",
-        json={"username": "empassist", "password": "password1", "name": "Emp Assist", "org": _default_slug()},
+        json={
+            "username": "empassist",
+            "password": "password1",
+            "name": "Emp Assist",
+            "org": _default_slug(),
+        },
     )
     token = _login(client, "empassist").json()["access_token"]
     emp = {"Authorization": f"Bearer {token}"}
