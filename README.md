@@ -104,6 +104,21 @@ cd frontend && npm run dev
 
 Open http://localhost:5173. Default operator: `admin` / `admin1234`. Vite proxies `/api` to port 8000.
 
+## Assignment 3: classroom attendance
+
+The **College / university** organization preset uses one attendance record per lecture. In the app, create a college organization, add at least 10 students with face photos under **Add faces**, create a course and enroll those students under **Timetable**, then create today's lecture. **Classroom scan** accepts a webcam capture or uploaded classroom photo while that lecture is open (15 minutes before start through its end). It detects multiple faces, matches only the enrolled course roster, and saves each recognized student once in SQLite. The results show unknown, low-quality, duplicate, and previously marked faces. **Download lecture CSV** exports the full roster with `present` or `not_seen`; the latter needs a manual check and does not prove absence.
+
+For a reproducible local demo with **10 fictional student records backed by LFW sample portraits**, run:
+
+```bash
+python scripts/download_lfw.py
+python scripts/setup_classroom_demo.py
+FRS_ENCODER=arcface FRS_IDENTIFY_THRESHOLD=0.2557 uvicorn app.main:app --app-dir backend --port 8000
+cd frontend && npm run dev
+```
+
+Sign in as `admin` / `admin1234`, select **Classroom Demo (LFW samples)**, then open **Classroom scan** and upload `data/classroom_demo_scan.jpg`. The script creates a course, today's open lecture, 10 enrolled face profiles, and [a small probe evaluation](reports/CLASSROOM_EVALUATION.md). The composite is a functional test image, not a real classroom photograph. LFW images, weights, embeddings, the SQLite database, and the composite stay local and are ignored by Git. Use consented student photos for a real classroom demonstration. The existing [TAR/FAR report](reports/TAR_FAR_REPORT.md) measures face verification on LFW; its numbers do not measure classroom attendance accuracy.
+
 **Postgres + PostGIS (geofence production path):**
 
 ```bash
